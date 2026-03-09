@@ -1,8 +1,10 @@
 {
-  "name": "@turbowarp/types",
-  "version": "0.0.14",
-  "description": "Type definitions for the Scratch VM and editor",
+  "name": "@nitro-bolt/types",
+  "version": "1.0.0",
+  "description": "Type definitions for NitroBolt",
   "keywords": [
+    "nitrobolt",
+    "turbowarp",
     "scratch"
   ],
   "main": "",
@@ -17,14 +19,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TurboWarp/types.git"
+    "url": "git+https://github.com/Nitro-Bolt/types.git"
   },
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/TurboWarp/types/issues"
+    "url": "https://github.com/Nitro-Bolt/types/issues"
   },
-  "homepage": "https://github.com/TurboWarp/types#readme",
+  "homepage": "https://github.com/Nitro-Bolt/types#readme",
   "devDependencies": {
     "typedoc": "^0.28.15",
     "typescript": "^5.9.3"

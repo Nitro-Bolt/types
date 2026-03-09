@@ -1,16 +1,16 @@
-# Type definitions for TurboWarp
+# Type definitions for NitroBolt
 
-This is a fork of [@turbowarp/types](https://github.com/TurboWarp/types) with additional types for TurboWarp's Scratch forks.
+This is a fork of [@turbowarp/types-tw](https://github.com/TurboWarp/types-tw) with additional types for NitroBolt.
 
-A possibly more human-readable version of the TypeScript definitions can be found at: https://turbowarp.github.io/types-tw/
+A possibly more human-readable version of the TypeScript definitions can be found at: https://types.nitrobolt.org/
 
 Install with:
 
 ```
-npm install @turbowarp/types@git+https://github.com/TurboWarp/types-tw.git#tw
+npm install @nitro-bolt/types@git+https://github.com/Nitro-Bolt/types.git#nb
 ```
 
-Then use in the same way as @turbowarp/types.
+Then use in the same way as @turbowarp/types-tw.
 
 <!--
 # Type definitions for the Scratch VM and editor

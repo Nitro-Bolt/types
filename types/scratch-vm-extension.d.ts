@@ -49,6 +49,7 @@ declare namespace Scratch {
     function toObject(value: unknown, nullSafe?: false | undefined): object;
     function toObject(value: unknown, nullSafe?: boolean): object | null;
     function toArray(value: unknown): unknown[];
+    function toFloat32Array(value: unknown): Float32Array;
     /**
      * @returns 0 if a == b, less than 0 if b is greater, greater than 0 if a is greater.
      * Do not compare to 1 or -1! You must always use === 0, < 0, or > 0.

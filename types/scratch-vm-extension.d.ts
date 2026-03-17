@@ -73,6 +73,7 @@ declare namespace Scratch {
     function toListIndex(index: unknown, length: number, acceptAll: false): number | 'INVALID';
     function toListIndex(index: unknown, length: number, acceptAll: true): number | 'INVALID' | 'ALL';
     function toListIndex(index: unknown, length: number, acceptAll: boolean): number | 'INVALID' | 'ALL';
+    function toArrayIndex(index: unknown, length: number): number | 'INVALID';
   }
   type TranslatableString = string | {
     id?: string;

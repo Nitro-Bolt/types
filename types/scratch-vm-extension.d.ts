@@ -153,13 +153,14 @@ declare namespace Scratch {
     // NB
     const OBJECT: 'Object';
     const ARRAY: 'Array';
+    const TABLE: 'table';
+    const EXTENDABLE: 'extendable';
 
     // TW
     const SOUND: 'sound';
     const COSTUME: 'costume';
     const VARIABLE: 'variable';
     const LIST: 'list';
-    const TABLE: 'table';
     const BROADCAST: 'broadcast';
 
     const ANGLE: 'angle';
@@ -203,6 +204,12 @@ declare namespace Scratch {
   interface ArrayArgument {
     type: 'Array';
   }
+  interface TableArgument {
+    type: 'table';
+  }
+  interface ExtendableArgument {
+    type: 'extendable';
+  }
 
   // TW
   interface SoundArgument {
@@ -216,9 +223,6 @@ declare namespace Scratch {
   }
   interface ListArgument {
     type: 'list';
-  }
-  interface TableArgument {
-    type: 'table';
   }
   interface BroadcastArgument {
     type: 'broadcast';
@@ -285,13 +289,14 @@ declare namespace Scratch {
     // NB
     ObjectArgument |
     ArrayArgument |
+    TableArgument |
+    ExtendableArgument |
 
     // TW
     CostumeArgument |
     SoundArgument |
     VariableArgument |
     ListArgument |
-    TableArgument |
     BroadcastArgument |
 
     AngleArgument |

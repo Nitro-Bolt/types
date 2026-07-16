@@ -642,6 +642,8 @@ declare namespace VM {
 
     isTouchingSprite(spriteName: string): boolean;
 
+    isTouchingTarget(target: Target): boolean;
+
     /**
      * @param rgb RGB channels from [0-255]
      */
@@ -1086,7 +1088,7 @@ declare namespace VM {
     INTERPOLATION_CHANGED: [boolean];
     STAGE_SIZE_CHANGED: [number, number];
     COMPILE_ERROR: [Target, unknown];
-    
+
     SCRIPT_GLOW_ON: [{
       id: string;
     }];

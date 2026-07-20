@@ -2,6 +2,9 @@
 // Project: https://github.com/LLK/scratch-blocks
 
 declare namespace ScratchBlocks {
+  const Blocks: Record<string, unknown>;
+  const Msg: Record<string, string>;
+
   class Block {
 
   }
@@ -178,6 +181,14 @@ declare namespace ScratchBlocks {
   interface BlocklyGlobal {
     getMainWorkspace(): Workspace | null;
   }
+
+  function prompt(
+    message: string,
+    defaultValue: string,
+    callback: (value: string | null) => void,
+    title?: string,
+    varType?: string
+  ): void;
 }
 
 declare const Blockly: ScratchBlocks.BlocklyGlobal | undefined;

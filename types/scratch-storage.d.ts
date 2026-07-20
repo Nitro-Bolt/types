@@ -23,7 +23,8 @@ declare namespace ScratchStorage {
     contentType: string;
     name: string;
     runtimeFormat: DataFormat;
-    immutable: true;
+    /** Indicates if the asset id is determined by the asset content. */
+    immutable: boolean;
   }
   namespace AssetType {
     // TW
@@ -37,6 +38,9 @@ declare namespace ScratchStorage {
   }
 
   class Asset {
+    // TW
+    clean: boolean;
+
     constructor(assetType: AssetType, assetId: string, dataFormat: DataFormat | null, data: Uint8Array, generateId?: boolean);
 
     assetType: AssetType;
@@ -47,6 +51,8 @@ declare namespace ScratchStorage {
      * MD5 of asset's data.
      */
     assetId: string;
+
+    data: Uint8Array;
 
     setData(data: Uint8Array, dataFormat: DataFormat, generateId?: boolean): void;
     encodeTextData(text: string, dataFormat: DataFormat, generateId?: boolean): void;
@@ -60,9 +66,11 @@ declare namespace ScratchStorage {
     dependencies: [];
   }
 
-  type UrlFunction = (asset: Asset) => string;
+  // TW: may also return a fetch request-config object, or false to skip the store
+  type UrlFunction = (asset: Asset) => string | object | false;
 
   interface Helper {
+    parent: ScratchStorage;
     load(assetType: AssetType, assetId: string, dataFormat: DataFormat): Promise<Asset>;
     store(assetType: AssetType, dataFormat: DataFormat, data: Uint8Array, assetId: string): Promise<unknown>;
   }
@@ -85,7 +93,10 @@ declare class ScratchStorage {
 
   load(assetType: ScratchStorage.AssetType, assetId: string, dataFormat: ScratchStorage.DataFormat): Promise<ScratchStorage.Asset | null>;
 
-  store(assetType: ScratchStorage.Asset, dataFormat: ScratchStorage.DataFormat, data: Uint8Array, assetId: string): Promise<unknown>;
+  store(assetType: ScratchStorage.AssetType, dataFormat: ScratchStorage.DataFormat, data: Uint8Array, assetId: string): Promise<unknown>;
+
+  getDefaultAssetId(type: ScratchStorage.AssetType): string | undefined;
+  setDefaultAssetId(type: ScratchStorage.AssetType, id: string): void;
 
   createAsset(assetType: ScratchStorage.AssetType, dataFormat: ScratchStorage.DataFormat, data: Uint8Array, assetId: null, generateId: true): ScratchStorage.Asset;
   createAsset(assetType: ScratchStorage.AssetType, dataFormat: ScratchStorage.DataFormat, data: Uint8Array, assetId: string, generateId?: boolean): ScratchStorage.Asset;

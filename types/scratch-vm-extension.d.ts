@@ -27,7 +27,7 @@ declare namespace Scratch {
   const renderer: RenderWebGL;
   // Permission requests here always return a promise, but the security manager methods themselves
   // can return either a boolean or promise.
-  function fetch(url: string, options?: RequestInit): Promise<Response>;
+  function fetch(url: string | Request, options?: RequestInit): Promise<Response>;
   function canFetch(url: string): Promise<boolean>;
   function openWindow(url: string, features?: string): Promise<Window | null>;
   function canOpenWindow(url: string): Promise<boolean>;
@@ -38,12 +38,18 @@ declare namespace Scratch {
   function canReadClipboard(): Promise<boolean>;
   function canNotify(): Promise<boolean>;
   function canGeolocate(): Promise<boolean>;
-  function canEmbed(): Promise<boolean>;
+  function canEmbed(url: string): Promise<boolean>;
   function canDownload(url: string, name: string): Promise<boolean>;
   function download(url: string, name: string): Promise<void>;
+  function canGeolocate(): Promise<boolean>;
   namespace Cast {
+    // toNumber is not redundant on numbers; NaN becomes 0
     function toNumber(value: unknown): number;
+    /** @deprecated You are casting a string to a string. This is redundant and does nothing. You should remove the cast or fix the inaccurate types. */
+    function toString(value: string): string;
     function toString(value: unknown): string;
+    /** @deprecated You are casting a boolean to a boolean. This is redundant and does nothing.. You should remove the cast or fix the inaccurate types. */
+    function toBoolean(value: boolean): boolean;
     function toBoolean(value: unknown): boolean;
     function toObject(value: unknown, nullSafe: true): object | null;
     function toObject(value: unknown, nullSafe?: false | undefined): object;
@@ -384,6 +390,10 @@ declare namespace Scratch {
      * Defaults to false.
      */
     disableMonitor?: boolean;
+    /**
+     * If this block is a reporter, this is the scope/context for its value. Defaults to 'global'.
+     */
+    reporterScope?: 'global' | 'target';
   }
   interface ObjectBlock extends ExecutableBlock {
     blockType: 'Object';

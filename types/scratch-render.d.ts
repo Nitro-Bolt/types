@@ -9,7 +9,7 @@ declare namespace RenderWebGL {
   type OverlayMode = 'scale' | 'scale-centered' | 'manual';
   interface Overlay {
     mode: OverlayMode;
-    root: HTMLElement;
+    container: HTMLElement;
     userElement: HTMLElement;
   }
   interface TextBubbleStyle {
@@ -47,6 +47,7 @@ declare namespace RenderWebGL {
     Fisheye = 'fisheye',
     Whirl = 'whirl',
     Pixelate = 'pixelate',
+    Mosaic = 'mosaic',
     Brightness = 'brightness',
     Ghost = 'ghost'
   }
@@ -79,6 +80,11 @@ declare namespace RenderWebGL {
     snapToInt(): void;
   }
 
+  namespace Rectangle {
+    function intersect(a: Rectangle, b: Rectangle, result?: Rectangle): Rectangle;
+    function union(a: Rectangle, b: Rectangle, result?: Rectangle): Rectangle;
+  }
+
   /**
    * Suggested properties of a drawing region. Strictly, this can really be whatever you want it to be.
    */
@@ -102,7 +108,7 @@ declare namespace RenderWebGL {
     static DRAW_MODE: Record<DrawMode, DrawMode>;
 
     _gl: AnyWebGLContext;
-    _shaderCache: Record<DrawMode, Record<EffectMask, twgl.ProgramInfo[]>>;
+    _shaderCache: Record<DrawMode, twgl.ProgramInfo[]>;
     _buildShader(drawMode: DrawMode, effectMask: EffectMask): twgl.ProgramInfo;
     getShader(drawMode: DrawMode, effectMask: EffectMask): twgl.ProgramInfo;
   }
@@ -110,6 +116,7 @@ declare namespace RenderWebGL {
   class Silhouette {
     // TW
     unlazy(): void;
+    _lazyData: BitmapData | null;
 
     static _updateCanvas(): HTMLCanvasElement;
 
@@ -128,8 +135,8 @@ declare namespace RenderWebGL {
     colorAtNearest(textureCoordinate: twgl.V3, destination?: Uint8ClampedArray): Uint8ClampedArray;
     colorAtLinear(textureCoordinate: twgl.V3, destination?: Uint8ClampedArray): Uint8ClampedArray;
 
-    isTouchingNearest(textureCoordinate: twgl.V3): void;
-    isTouchingLinear(textureCoordinate: twgl.V3): void;
+    isTouchingNearest(textureCoordinate: twgl.V3): boolean;
+    isTouchingLinear(textureCoordinate: twgl.V3): boolean;
   }
 
   // TW: Skin is not an EventListener
@@ -160,7 +167,7 @@ declare namespace RenderWebGL {
       u_skinSize: [number, number];
       u_skin: WebGLTexture | null;
     };
-    getUniforms(): Skin['_uniforms'];
+    getUniforms(scale?: [number, number]): Skin['_uniforms'];
 
     _silhouette: Silhouette;
     updateSilhouette(): void;
@@ -177,11 +184,15 @@ declare namespace RenderWebGL {
 
     useNearest(scale: [number, number], drawable: Drawable): boolean;
 
-    getTexture(scale: [number, number]): WebGLTexture;
+    getTexture(scale?: [number, number]): WebGLTexture;
     _setTexture(image: BitmapData): void;
     setEmptyImageData(): void;
 
-    getFenceBounds(): Rectangle;
+    /**
+     * Get the bounds of the drawable for determining its fenced position.
+     * For compatibility with Scratch 2, we always use getAABB.
+     */
+    getFenceBounds(drawable: Drawable, result?: Rectangle): Rectangle;
 
     dispose(): void;
   }
@@ -230,15 +241,25 @@ declare namespace RenderWebGL {
     /**
      * Pen color in RGBA from 0-1.
      */
-    color4f: [number, number, number, number];
-    diameter: number;
+    color4f?: [number, number, number, number];
+    diameter?: number;
   }
 
   class PenSkin extends Skin {
+    // TW
+    renderQuality: number;
+    setRenderQuality(quality: number): void;
+    _nativeSize: [number, number];
+    _flushLines(): void;
+    _drawPenTexture(texture: WebGLTexture): void;
+    _drawTextureRegionId: DrawingRegion;
+    _enterDrawTexture(): void;
+    _exitDrawTexture(): void;
+
     _renderer: RenderWebGL;
 
     _size: [number, number];
-    _framebuffer: WebGLFramebuffer;
+    _framebuffer: twgl.FrameBufferInfo;
     _silhouetteDirty: boolean;
     _silhouettePixels: Uint8Array;
     _silhouetteImageData: ImageData;
@@ -252,7 +273,6 @@ declare namespace RenderWebGL {
     _enterUsePenBuffer(): void;
     _exitUsePenBuffer(): void;
 
-    _lineBufferInfo: twgl.BufferInfo;
     _lineShader: Shader;
 
     clear(): void;
@@ -296,6 +316,10 @@ declare namespace RenderWebGL {
   class TextBubbleSkin extends Skin {
     // TW
     readonly _style: Readonly<TextBubbleStyle>;
+    /**
+     * Change style used for rendering the bubble. Properties not specified will be unchanged.
+     * Given argument will be copied internally, so you can freely change it later without affecting the skin.
+     */
     setStyle(newStyles: Partial<TextBubbleStyle>): void;
 
     _renderer: RenderWebGL;
@@ -308,6 +332,7 @@ declare namespace RenderWebGL {
       width: number;
       height: number
     };
+    _text: string;
     _bubbleType: TextBubbleType;
     _pointsLeft: boolean;
     _textDirty: boolean;
@@ -332,6 +357,8 @@ declare namespace RenderWebGL {
   class Drawable {
     // TW
     interactive: boolean;
+    _highQuality: boolean;
+    setHighQuality(highQuality: boolean): void;
 
     static color4fFromID(id: number): [number, number, number, number];
     static color3bToID(r: number, g: number, b: number): number;
@@ -363,7 +390,7 @@ declare namespace RenderWebGL {
 
     _scale: twgl.V3;
     get scale(): twgl.V3;
-    updateScale(scale: number): void;
+    updateScale(scale: [number, number]): void;
 
     _direction: number;
     updateDirection(direction: number): void;
@@ -400,7 +427,7 @@ declare namespace RenderWebGL {
     _convexHullPoints: Array<[number, number]>;
     _convexHullDirty: boolean;
     needsConvexHullPoints(): boolean;
-    setConvexHullDirty(): boolean;
+    setConvexHullDirty(): void;
     setConvexHullPoints(points: Array<[number, number]>): void;
 
     _transformedHullPoints: Array<[number, number]>;
@@ -419,6 +446,11 @@ declare namespace RenderWebGL {
     getFastBounds(result?: Rectangle): Rectangle;
 
     updateCPURenderAttributes(): void;
+    /**
+     * Check if the world position touches the skin.
+     * The caller is responsible for ensuring this drawable's inverse matrix & its skin's silhouette are up-to-date.
+     * @see updateCPURenderAttributes
+     */
     isTouching(textureCoordinate: twgl.V3): boolean;
     _isTouchingNearest(textureCoordinate: twgl.V3): boolean;
     _isTouchingLinear(textureCoordinate: twgl.V3): boolean;
@@ -447,6 +479,11 @@ declare class RenderWebGL extends EventEmitter<RenderWebGL.ScratchRenderEventMap
   useHighQualityRender: boolean;
   offscreenTouching: boolean;
   dirty: boolean;
+  /**
+   * Whether projects should be able to access the contents of private skins such as webcams.
+   * If set to false, routines such as isTouchingColor will ignore private skins.
+   * Private skins will still be rendered on the canvas regardless of this setting.
+   */
   allowPrivateSkinAccess: boolean;
   setUseHighQualityRender(enabled: boolean): void;
   _updateRenderQuality(): void;
@@ -460,10 +497,14 @@ declare class RenderWebGL extends EventEmitter<RenderWebGL.ScratchRenderEventMap
   setCustomFonts(customFonts: Record<string, string>): void;
   addOverlay(element: HTMLElement, mode?: RenderWebGL.OverlayMode): RenderWebGL.Overlay;
   removeOverlay(element: HTMLElement): void;
+  /**
+   * Element that contains all overlays.
+   */
+  overlayContainer: HTMLElement;
   _overlays: RenderWebGL.Overlay[];
   _updateOverlays(): void;
   exports: {
-    twgl: object, // TODO
+    twgl: twgl;
     Drawable: {
       new(id: number, renderer: RenderWebGL): RenderWebGL.Drawable;
     };
@@ -485,7 +526,21 @@ declare class RenderWebGL extends EventEmitter<RenderWebGL.ScratchRenderEventMap
     CanvasMeasurementProvider: {
       new(ctx: CanvasRenderingContext2D): RenderWebGL.CanvasMeasurementProvider;
     }
+    EffectTransform: {
+      transformPoint(drawable: RenderWebGL.Drawable, vec: twgl.V3, dst: twgl.V3): twgl.V3;
+      transformColor(drawable: RenderWebGL.Drawable, inOutColor: Uint8ClampedArray, effectMask?: number): Uint8ClampedArray;
+    };
   }
+  /**
+   * Suggested maximum texture size in texels. This is not a hard limit.
+   */
+  maxTextureDimension: number;
+  /**
+   * Modify the suggested maximum texture dimension. This should be set before any skins are created.
+   * @param newMax The new maximum in texels
+   */
+  setMaxTextureDimension(newMax: number): void;
+  _penSkinId: number | null;
 
   static isSupported(canvas?: HTMLCanvasElement): boolean;
 
@@ -497,7 +552,7 @@ declare class RenderWebGL extends EventEmitter<RenderWebGL.ScratchRenderEventMap
   static _getContext(canvas: HTMLCanvasElement): RenderWebGL.AnyWebGLContext | null;
 
   // TW: converted to instance method; returns 4th channel for alpha
-  sampleColor4b(vector: twgl.V3, drawableIds: number[], destination?: Uint8ClampedArray): Uint8ClampedArray;
+  sampleColor4b(vector: twgl.V3, drawables: ReturnType<RenderWebGL['_candidatesTouching']>, destination?: Uint8ClampedArray): Uint8ClampedArray;
 
   constructor(canvas: HTMLCanvasElement, xLeft?: number, xRight?: number, yBottom?: number, yTop?: number);
 
@@ -524,6 +579,9 @@ declare class RenderWebGL extends EventEmitter<RenderWebGL.ScratchRenderEventMap
   draw(): void;
 
   _drawThese(drawableIds: number[], drawMode: RenderWebGL.DrawMode, projection: twgl.M4, opts?: {
+    // TW
+    skipPrivateSkins?: boolean;
+
     filter?: (drawableId: number) => boolean;
     extraUniforms?: object;
     effectMask?: RenderWebGL.EffectMask;
@@ -648,7 +706,7 @@ declare class RenderWebGL extends EventEmitter<RenderWebGL.ScratchRenderEventMap
   pick(centerX: number, centerY: number, width?: number, height?: number, candidateIds?: number[]): number | -1;
 
   extractDrawableScreenSpace(drawableId: number): {
-    data: ImageData;
+    imageData: ImageData;
     x: number;
     y: number;
     width: number;

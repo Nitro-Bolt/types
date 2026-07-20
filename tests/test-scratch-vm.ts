@@ -47,15 +47,15 @@ if (target) {
     target.setCustomState('Scratch.looks', bubbleState);
   }
 
-  target.on('TARGET_MOVED', (target, fromX, fromY, forced) => {
+  target.onTargetMoved = (target, fromX, fromY, forced) => {
     const id: string = target.id;
     const x: number = fromX;
     const y: number = fromY;
-    const f: boolean | undefined = forced;
-  })
-  target.on('EVENT_TARGET_VISUAL_CHANGE', (target) => {
+    const f: boolean = forced;
+  };
+  target.onTargetVisualChange = (target) => {
     const id: string = target.id;
-  });
+  };
 
   runtime.on('STOP_FOR_TARGET', (t: VM.RenderedTarget) => {
 
@@ -82,3 +82,7 @@ costume?.skinId as number;
 declare const util: VM.BlockUtility;
 util.startHats('hats', {BROADCAST_OPTION: 'test'}) as VM.Thread[];
 util.ioQuery('mouse', 'getIsDown', []);
+
+const videoCanvas: HTMLCanvasElement | null = vm.runtime.ioDevices.video.getFrame({
+  format: "canvas",
+});

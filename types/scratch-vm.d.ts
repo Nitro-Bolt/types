@@ -27,19 +27,31 @@ declare namespace VM {
     runtime: Runtime;
     running: boolean;
     framerate: number;
-    interpolation: number;
+    interpolation: boolean;
+    _stepAnimation?: {
+      cancel(): void
+    };
+    _interpolationAnimation?: {
+      cancel(): void
+    };
+    _noopAnimation?: {
+      cancel(): void
+    };
+    _stepInterval?: ReturnType<typeof setInterval>;
     setFramerate(framerate: number): void;
     setInterpolation(interpolation: boolean): void;
     stepCallback(): void;
     interpolationCallback(): void;
+    noopCallback(): void;
     _restart(): void;
     start(): void;
     stop(): void;
   }
   interface AddonBlockOptions {
     procedureCode: string;
-    callback(args: Record<string, string | number | boolean>, util: BlockUtility): void;
-    arguments: string[];
+    callback(args: Record<string, string | number | boolean>, util: BlockUtility): void | Promise<void>;
+    arguments?: string[];
+    return?: 1 | 2;
     hidden?: boolean;
   }
   interface AddonBlock extends AddonBlockOptions {
@@ -56,6 +68,10 @@ declare namespace VM {
     canRecordVideo(): Awaitable<boolean>;
     canReadClipboard(): Awaitable<boolean>;
     canNotify(): Awaitable<boolean>;
+    rewriteExtensionURL(url: string): Awaitable<string>;
+    canGeolocate(): Awaitable<boolean>;
+    canEmbed(url: string): Awaitable<boolean>;
+    canDownload(url: string, name: string): Awaitable<boolean>;
   }
   interface FontManagerEvents {
     change: [];
@@ -69,6 +85,7 @@ declare namespace VM {
       asset?: ScratchStorage.Asset
     }>;
     restrictedFonts: Set<string>;
+    /** Prevents a family from being overridden by a custom font. The project may still use it as a system font. */
     restrictFont(font: string): void;
     isValidSystemFont(family: string): boolean;
     isValidCustomFont(family: string): boolean;
@@ -140,6 +157,8 @@ declare namespace VM {
      */
     md5?: string;
 
+    md5ext?: string;
+
     name: string;
 
     /** TW: asset may be null in packaged runtime mode (runtime.isPackaged) */
@@ -171,6 +190,32 @@ declare namespace VM {
     sounds: Sound[];
     clones: RenderedTarget[];
     soundBank: AudioEngine.SoundBank | null;
+
+    /**
+     * Create a clone of this sprite.
+     * @param optLayerGroup Optional layer group the clone's drawable should be added to. Defaults to the sprite layer group.
+     */
+    createClone(optLayerGroup?: string): RenderedTarget;
+
+    duplicate(): Promise<Sprite>;
+
+    /**
+     * Add a costume at the given index, taking care to avoid duplicate names.
+     */
+    addCostumeAt(costumeObject: Costume, index: number): void;
+
+    /**
+     * Delete a costume by index.
+     * @returns The deleted costume, or undefined if none existed at that index.
+     */
+    deleteCostumeAt(index: number): Costume | undefined;
+
+    /**
+     * Disconnect a clone from this sprite. The clone is unmodified; in particular its dispose() is not called.
+     */
+    removeClone(clone: RenderedTarget): void;
+
+    dispose(): void;
   }
 
   interface Field {
@@ -235,17 +280,37 @@ declare namespace VM {
   }
 
   interface Blocks {
+    // TW
+    /**
+     * Get the cached compilation result of a block.
+     * @returns Cached success or error, or null if there is no cached value.
+     */
+    getCachedCompileResult(blockId: string): {success: boolean; value: any} | null;
+    cacheCompileResult(blockId: string, value: unknown): void;
+    cacheCompileError(blockId: string, error: unknown): void;
+    populateProcedureCache(): void;
+
     runtime: Runtime;
 
     _blocks: Record<string, Block>;
 
     getBlock(id: string): Block | undefined;
 
-    getOpcode(id: string): string | null;
+    getOpcode(block: Block): string | null;
 
-    getFields(id: string): object | null;
+    getFields(block: Block): Record<string, Field> | null;
 
-    getInputs(id: string): object | null;
+    getInputs(block: Block): Record<string, Input> | null;
+
+    getMutation(block: Block): ProcedureCallMutation | ProcedurePrototypeMutation | null;
+
+    getScripts(): string[];
+
+    getNextBlock(id: string): string | null;
+
+    getBranch(id: string, branchNum?: number): string | null;
+
+    getTopLevelScript(id: string): string | null;
 
     getProcedureDefinition(procedureCode: string): string | null;
 
@@ -326,6 +391,7 @@ declare namespace VM {
     y: number;
     width: number;
     height: number;
+    toXML(): string;
   }
 
   interface PostedSpriteInfo {
@@ -437,6 +503,77 @@ declare namespace VM {
      */
     createVariable(id: string, name: string, type: VariableType, isCloud?: boolean): void;
 
+    /**
+     * Renames the variable with the given id to newName.
+     */
+    renameVariable(id: string, newName: string): void;
+
+    /**
+     * Removes the variable with the given id from the dictionary of variables.
+     */
+    deleteVariable(id: string): void;
+
+    /**
+     * Create a clone of the variable with the given id.
+     * Returns null if the original variable was not found.
+     */
+    duplicateVariable(id: string, optKeepOriginalId?: boolean): Variable | null;
+
+    /**
+     * Duplicate the dictionary of this target's variables as part of duplicating this target or making a clone.
+     */
+    duplicateVariables(optBlocks?: Blocks): Record<string, Variable>;
+
+    /**
+     * Remove this target's monitors from the runtime state and remove the
+     * target-specific monitored blocks (e.g. local variables, x-position).
+     * Does not delete stage monitors like backdrop name.
+     */
+    deleteMonitors(): void;
+
+    /**
+     * Get the names of all the variables of the given type that are in scope for this target.
+     * @param type Defaults to the scalar type.
+     * @param skipStage Optional flag to skip the stage.
+     */
+    getAllVariableNamesInScopeByType(type?: VariableType, skipStage?: boolean): string[];
+
+    /**
+     * Merge variable references with another variable.
+     */
+    mergeVariables(idToBeMerged: string, idToMergeWith: string, optReferencesToUpdate?: object[], optNewName?: string): void;
+
+    /**
+     * Fixes up variable references in this target avoiding conflicts with
+     * pre-existing variables in the same scope. Used when uploading a target as a new sprite.
+     */
+    fixUpVariableReferences(): void;
+
+    /**
+     * Share the given variable-referencing fields with the target of the given id, resolving conflicts.
+     */
+    resolveVariableSharingConflictsWithTarget(blocks: Block[], receivingTarget: Target): void;
+
+    /**
+     * Share a local variable (and given references for that variable) to the stage.
+     */
+    shareLocalVariableToStage(varId: string, varRefs: object[]): void;
+
+    /**
+     * Share a local variable with a sprite, merging with one of the same name and type if it exists.
+     */
+    shareLocalVariableToSprite(varId: string, sprite: Target, varRefs: object[]): void;
+
+    /**
+     * Update an edge-activated hat block value.
+     * @return The old value for the edge-activated hat.
+     */
+    updateEdgeActivatedValue(blockId: string, newValue: unknown): unknown;
+
+    hasEdgeActivatedValue(blockId: string): boolean;
+
+    clearEdgeActivatedValues(): void;
+
     _customState: Partial<CustomState>;
     getCustomState<T extends keyof CustomState>(name: T): CustomState[T] | undefined;
     setCustomState<T extends keyof CustomState>(name: T, value: CustomState[T]): void;
@@ -452,15 +589,13 @@ declare namespace VM {
   }
 
   const enum RotationStyle {
-    AllAround = 'all-around',
+    AllAround = 'all around',
     LeftRight = 'left-right',
     None = "don't rotate"
   }
 
   interface RenderedTargetEventMap {
-    TARGET_MOVED: [RenderedTarget, number, number, boolean?];
-
-    EVENT_TARGET_VISUAL_CHANGE: [RenderedTarget];
+    // TW: these events are replaced by properties
   }
 
   const enum Effect {
@@ -485,6 +620,19 @@ declare namespace VM {
   }
 
   interface RenderedTarget extends BaseTarget {
+    // TW
+    onTargetMoved: ((target: RenderedTarget, oldX: number, oldY: number, force: boolean) => void) | null;
+    interpolationData: {
+        x: number;
+        y: number;
+        direction: number;
+        scale: [number, number];
+        costume: number;
+        ghost: number;
+    } | null;
+    onTargetVisualChange: ((target: RenderedTarget) => void) | null;
+    emitVisualChange(): void;
+
     sprite: Sprite;
 
     renderer: IfRenderer<RenderWebGL, undefined>;
@@ -494,6 +642,8 @@ declare namespace VM {
     isOriginal: boolean;
 
     isStage: boolean;
+
+    dragging: boolean;
 
     /**
      * Returns true if the target is not the stage and is not a clone.
@@ -510,7 +660,7 @@ declare namespace VM {
      */
     setXY(x: number, y: number, force?: boolean): void;
 
-    keepInFence(newX: number, newY: number, fence?: SimpleRectangle): [number, number];
+    keepInFence(newX: number, newY: number, fence?: SimpleRectangle): [number, number] | undefined;
 
     /**
      * Direction in degrees. Defaults to 90 (right). Can be from -179 to 180.
@@ -690,7 +840,7 @@ declare namespace VM {
     tempo: number;
 
     videoTransparency: number;
-
+    videoState: 'off' | 'on' | 'on-flipped';
 
     /**
      * Create a clone of this sprite if the clone limit has not been reached.
@@ -710,6 +860,23 @@ declare namespace VM {
 
     updateAllDrawableProperties(): void;
 
+    /**
+     * The language to use for speech synthesis, in the text2speech extension.
+     * Initialized to null; on extension load it may be set from the editor locale.
+     */
+    textToSpeechLanguage: string | null;
+
+    /**
+     * Create a drawable with this.renderer.
+     * @param layerGroup The layer group this drawable should be added to (a StageLayering value).
+     */
+    initDrawable(layerGroup: string): void;
+
+    /**
+     * Initialize the audio player for this sprite or clone.
+     */
+    initAudio(): void;
+
     toJSON(): SerializedTarget;
   }
 
@@ -722,6 +889,9 @@ declare namespace VM {
   }
 
   interface StackFrame {
+    /** TW: Internal block object being executed. Not the same as the object found in target.blocks. */
+    op: unknown;
+
     isLoop: boolean;
     warpMode: boolean;
     justReported: unknown;
@@ -731,7 +901,7 @@ declare namespace VM {
     waitingReporter: unknown;
     params: unknown;
     executionContext: unknown;
-    reset(): void;
+    reset(): StackFrame;
   }
 
   interface BlockUtility {
@@ -763,13 +933,17 @@ declare namespace VM {
      */
     stopThisScript(): void;
     /**
+     * @see {Sequencer.stepToProcedure}
+     */
+    startProcedure(procedureCode: string): void;
+    /**
      * @see {Blocks.getProcedureParamNamesAndIds}
      */
-    getProcedureParamNamesAndIds(): [string[], string[]];
+    getProcedureParamNamesAndIds(procedureCode: string): [string[], string[]];
     /**
      * @see {Blocks.getProcedureParamNamesIdsAndDefaults}
      */
-    getProcedureParamNamesIdsAndDefaults(): [string[], string[], string[]];
+    getProcedureParamNamesIdsAndDefaults(procedureCode: string): [string[], string[], string[]];
     /**
      * @see {Thread.initParams}
      */
@@ -805,6 +979,11 @@ declare namespace VM {
     triedToCompile: boolean;
     generator: Generator | null;
     getId(): string;
+    procedures: Record<string, unknown> | null;
+    executableHat: boolean;
+    timer: Timer | null;
+    compatibilityStackFrame: Record<string, unknown> | null;
+    getAllparams(): unknown;
 
     topBlock: string;
     stack: string[];
@@ -820,7 +999,7 @@ declare namespace VM {
     reuseStackForNextBlock(blockId: string): void;
     pushStack(blockId: string): void;
     popStack(): string;
-    peekStack(): string;
+    peekStack(): string | null;
     peekStackFrame(): StackFrame | null;
     peekParentStackFrame(): StackFrame | null;
     pushReportedValue(value: ScratchCompatibleValue): void;
@@ -871,17 +1050,17 @@ declare namespace VM {
     start(id: number, arg: unknown): void;
     stop(): void;
     increment(id: number): void;
-    frame(id: string, arg: unknown): ProfilerFrame;
+    frame(id: number, arg: unknown): ProfilerFrame;
     reportFrames(): void;
     idByName(name: string): number;
-    nameById(id: number): string;
+    nameById(id: number): string | null;
   }
 
   interface Sequencer {
     timer: Timer;
     runtime: Runtime;
     activeThread: Thread | null;
-    stepThreads(): void;
+    stepThreads(): Thread[];
     stepThread(thread: Thread): void;
     stepToBranch(thread: Thread, branch: number, isLoop: boolean): void;
     stepToProcedure(thread: Thread, procedureCode: string): void;
@@ -889,20 +1068,30 @@ declare namespace VM {
   }
 
   interface ImportedExtensionsInfo {
-    extensionIDs: string[];
-    extensionURLs: string[];
+    extensionIDs: Set<string>;
+    extensionURLs: Map<string, string>;
   }
 
   interface ExtensionManager {
     // TW
     securityManager: SecurityManager;
+    /**
+     * Determine whether an extension with a given ID is built in to the VM, such as pen.
+     * Note that "core extensions" like motion will return false here.
+     */
+    isBuiltinExtension(extensionId: string): boolean;
+    addBuiltinExtension(extensionId: string, extensionClass: new (runtime: Runtime) => unknown): void;
+    getExtensionURLs(): Record<string, string>;
+    isExtensionURLLoaded(url: string): boolean;
+    allAsyncExtensionsLoaded(): Promise<void> | undefined;
 
     runtime: Runtime;
+    _loadedExtensions: Map<string, string>;
 
     /**
      * @param extensionId Specified which extension to refresh. Added by TW.
      */
-    refreshBlocks(extensionId?: string): Promise<void[]>;
+    refreshBlocks(extensionId?: string): Promise<void | void[]>;
 
     isExtensionLoaded(extensionID: string): boolean;
 
@@ -915,7 +1104,7 @@ declare namespace VM {
     /**
      * Load a remote extension. Does not work on scratch.mit.edu.
      */
-    loadExtensionURL(extensionID: string): Promise<number>;
+    loadExtensionURL(extensionID: string): Promise<void>;
   }
 
   /**
@@ -924,9 +1113,9 @@ declare namespace VM {
   interface Timer {
     startTime: number;
 
-    time(): number;
+    nowObj: { now(): number };
 
-    relativeTime(): number;
+    time(): number;
 
     start(): void;
 
@@ -997,6 +1186,9 @@ declare namespace VM {
   }
 
   interface KeyboardData {
+    // TW
+    keyCode?: number;
+
     key: string;
     isDown: boolean;
   }
@@ -1005,6 +1197,8 @@ declare namespace VM {
     // TW
     _usedKeys: Set<string>;
     hasUsedKey(scratchKey: string): boolean;
+    lastKeyPressed: string;
+    getLastKeyPressed(): string;
 
     runtime: Runtime;
     postData(data: KeyboardData): void;
@@ -1014,14 +1208,26 @@ declare namespace VM {
   }
 
   interface MouseData {
+    // TW
+    button?: number;
+
     x?: number;
     y?: number;
     canvasWidth?: number;
     canvasHeight?: number;
     isDown?: boolean;
+    wasDragged?: boolean;
   }
 
   interface Mouse {
+    // TW
+    usesRightClickDown: boolean;
+    /**
+     * tw: Get the down state of a specific button of the mouse.
+     * @param button The ID of the button. 0 = left, 1 = middle, 2 = right
+     */
+    getButtonIsDown(button: number): boolean;
+
     runtime: Runtime;
     _clientX: number;
     _clientY: number;
@@ -1062,11 +1268,44 @@ declare namespace VM {
   }
 
   interface VideoData {
-    // TODO
+    forceTransparentPreview: boolean;
   }
 
   interface Video {
-    // TODO
+    runtime: Runtime;
+    provider: VideoProvider | null;
+    _drawable: number;
+    _skinId: number;
+    mirror?: boolean;
+    readonly videoReady: boolean;
+
+    enableVideo(): Promise<void> | null;
+    disableVideo(): void;
+
+    getFrame(frameInfo: {
+      dimensions?: [number, number];
+      mirror?: boolean;
+      format?: 'image-data';
+      cacheTimeout?: number;
+    }): ImageData | null;
+    getFrame(frameInfo: {
+      dimensions?: [number, number];
+      mirror?: boolean;
+      format?: 'canvas';
+      cacheTimeout?: number;
+    }): HTMLCanvasElement | null;
+    getFrame(frameInfo: {
+      dimensions?: [number, number];
+      mirror?: boolean;
+      format?: 'image-data' | 'canvas' | string;
+      cacheTimeout?: number;
+    }): ImageData | HTMLCanvasElement | string | null;
+
+    /**
+     * @param ghost from 0 (visible) to 100 (invisible)
+     */
+    setPreviewGhost(ghost: number): void;
+
     postData(data: VideoData): void;
   }
 
@@ -1247,6 +1486,14 @@ declare namespace VM {
     isPackaged: boolean;
     externalCommunicationMethods: Record<string, boolean>;
     enforcePrivacy: boolean;
+    /**
+     * True if an external communication method exists and enforcePrivacy is enabled.
+     * Do not update directly; changed via functions that call updatePrivacy().
+     */
+    privacyRestrictionsActive: boolean;
+    totalAssetRequests: number;
+    finishedAssetRequests: number;
+    wrapAssetRequest<T>(callback: () => Promise<T>): Promise<T>;
     extensionManager: ExtensionManager;
     fontManager: FontManager;
     emitCompileError(target: Target, error: unknown): void;
@@ -1259,7 +1506,7 @@ declare namespace VM {
     convertToPackagedRuntime(): void;
     resetAllCaches(): void;
     addAddonBlock(addonBlock: AddonBlockOptions): void;
-    getAddonBlock(procedureCode: string): AddonBlock;
+    getAddonBlock(procedureCode: string): AddonBlock | null;
     findProjectOptionsComment(): Comment | null;
     parseProjectOptions(): void;
     _generateAllProjectOptions(): unknown; // TODO
@@ -1307,6 +1554,11 @@ declare namespace VM {
      * If true, the runtime is running at 60 FPS. If false, the runtime is running at 30 FPS.
      */
     compatibilityMode: boolean;
+
+    /**
+     * Set whether the runtime is in 30 TPS "compatibility mode".
+     */
+    setCompatibilityMode(compatibilityMode: boolean): void;
 
     renderer: IfRenderer<RenderWebGL, undefined>;
 
@@ -1418,6 +1670,22 @@ declare namespace VM {
 
     monitorBlocks: Blocks;
 
+    monitorBlockInfo: Record<string, unknown>;
+
+    requestAddMonitor(monitor: unknown): void;
+
+    requestUpdateMonitor(delta: unknown): boolean;
+
+    requestRemoveMonitor(monitorId: string): void;
+
+    requestHideMonitor(monitorId: string): boolean;
+
+    requestShowMonitor(monitorId: string): boolean;
+
+    requestRemoveMonitorByTargetId(targetId: string): void;
+
+    addMonitorScript(topBlockId: string, optTarget?: Target): void;
+
     // TW: modified to require target as first argument
     visualReport(target: Target, blockId: string, value: any, error: boolean, html: string): void;
 
@@ -1434,6 +1702,8 @@ declare namespace VM {
       id: string;
       xml: string;
     }>;
+
+    getBlocksJSON(): object[];
 
     _blockInfo: ExtensionInfo[];
 
@@ -1453,11 +1723,6 @@ declare namespace VM {
      * The time of a step, measured in milliseconds. null if accessed before the project has started.
      */
     currentStepTime: number | null;
-
-    /**
-     * Interval ID returned by setInterval(). null if accessed before the project has started.
-     */
-    _steppingInterval: number | null;
 
     redrawRequested: boolean;
 
@@ -1521,6 +1786,8 @@ declare namespace VM {
 
     emitProjectLoaded(): void;
 
+    handleProjectLoaded(): void;
+
     emitProjectChanged(): void;
 
     _editingTarget: Target | null;
@@ -1535,6 +1802,16 @@ declare namespace VM {
     disconnectPeripheral(extensionID: string): void;
 
     getPeripheralIsConnected(extensionID: string): boolean;
+
+    peripheralExtensions: Record<string, unknown>;
+
+    registerPeripheralExtension(extensionId: string, extension: unknown): void;
+
+    getScratchLinkSocket(type: 'BLE' | 'BT'): unknown;
+
+    configureScratchLinkSocketFactory(factory: (type: string) => unknown): void;
+
+    emitMicListening(listening: boolean): void;
 
     profiler: Profiler | null;
     enableProfiling(callback: (profilerFrame: ProfilerFrame) => void): void;
@@ -1558,7 +1835,7 @@ declare namespace VM {
     playgroundData: [{
       blocks: Blocks;
       // Stringified JSON of Thread[]
-      thread: string;
+      threads: string;
     }];
   }
 }
@@ -1582,6 +1859,12 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
   enableDebug(): string;
   getExportedCostume(costume: VM.Costume): Uint8Array;
   getExportedCostumeBase64(costume: VM.Costume): string;
+  serializeAssets(targetId?: string): Array<{
+    fileName: string;
+    fileContent: Uint8Array;
+  }>;
+  exportStandaloneBlocks(blockObjects: VM.Block[]): object;
+  handleExtensionButtonPress(buttonData: unknown): void;
   securityManager: VM.SecurityManager;
   exports: {
     Sprite: {
@@ -1692,7 +1975,8 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
   saveProjectSb3<T extends keyof JSZip.OutputTypes>(type: T): Promise<JSZip.OutputTypes[T]>;
   saveProjectSb3(): Promise<Blob>;
 
-  toJSON(targetId?: string): string;
+  // TW: add serializationOptions
+  toJSON(targetId?: string, serializationOptions?: unknown): string;
 
   /**
    * @see {VM.Runtime.getEditingTarget}
@@ -1739,13 +2023,13 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
    */
   addSprite(data: ArrayBufferView | ArrayBuffer | string | object): Promise<void>;
 
-  addCostume(md5ext: string, costume?: VM.Costume, targetId?: string, version?: 2): Promise<void>;
+  addCostume(md5ext: string, costume?: Partial<VM.Costume>, targetId?: string, version?: 2): Promise<void>;
 
-  addCostumeFromLibrary(md5ext: string, costume: VM.Costume): Promise<void>;
+  addCostumeFromLibrary(md5ext: string, costume: Partial<VM.Costume>): Promise<void>;
 
   addBackdrop(md5ext: string, costume?: VM.Costume): Promise<void>;
 
-  addSound(sound: VM.Sound, targetId?: string): Promise<void>;
+  addSound(sound: Partial<VM.Sound>, targetId?: string): Promise<void>;
 
   duplicateSprite(targetId: string): Promise<void>;
 
@@ -1868,4 +2152,50 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
    * @see {VM.Runtime.getPeripheralIsConnected}
    */
   getPeripheralIsConnected(extensionID: string): boolean;
+
+  /**
+   * Get data for playground. Data comes back in an emitted playgroundData event.
+   */
+  getPlaygroundData(): void;
+
+  /**
+   * Set the current locale and builtin messages for the VM. Resolves once all blocks have
+   * been updated for the new locale.
+   */
+  setLocale(locale: string, messages: Record<string, string>): Promise<void[]>;
+
+  /**
+   * Get the current locale for the VM.
+   */
+  getLocale(): string;
+
+  /**
+   * Delete all of the flyout blocks.
+   */
+  clearFlyoutBlocks(): void;
+
+  /**
+   * Handle a Blockly event for the current editing target.
+   */
+  blockListener(e: unknown): void;
+
+  /**
+   * Handle a Blockly event for the flyout.
+   */
+  flyoutBlockListener(e: unknown): void;
+
+  /**
+   * Handle a Blockly event for the flyout to be passed to the monitor container.
+   */
+  monitorBlockListener(e: unknown): void;
+
+  /**
+   * Handle a Blockly event for the variable map.
+   */
+  variableListener(e: unknown): void;
+
+  /**
+   * Allow VM consumer to configure the ScratchLink socket creator.
+   */
+  configureScratchLinkSocketFactory(factory: Function): void;
 }

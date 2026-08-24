@@ -437,6 +437,7 @@ declare namespace Scratch {
     acceptReporters?: boolean;
     /**
      * A list of static items in the menu, or the name of the dynamic menu function.
+     * The string '---' adds a non-selectable separator between items.
      */
     items: Array<string | {
       text: string;

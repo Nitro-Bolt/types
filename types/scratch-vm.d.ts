@@ -2068,7 +2068,7 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
   deleteSprite(targetId: string): (() => void) | null;
 
   /**
-   * Deletes the costume at a given index int he editing target.
+   * Deletes the costume at a given index in the editing target.
    * @returns If a costume was deleted, returns a function to undo the deletion.
    */
   deleteCostume(costumeIndex: number): (() => void) | null;

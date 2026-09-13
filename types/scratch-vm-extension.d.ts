@@ -161,6 +161,7 @@ declare namespace Scratch {
     const ARRAY: 'Array';
     const TABLE: 'table';
     const EXTENDABLE: 'extendable';
+    const SLIDER: 'slider';
 
     // TW
     const SOUND: 'sound';
@@ -215,6 +216,19 @@ declare namespace Scratch {
   }
   interface ExtendableArgument {
     type: 'extendable';
+    text: string;
+    arguments: Record<string, Argument>;
+    defaultInputs?: number;
+    minInputs?: number;
+    maxInputs?: number;
+    separator?: string;
+  }
+  interface SliderArgument {
+    type: 'slider';
+    defaultValue?: string | number;
+    min?: number;
+    max?: number;
+    precision?: number;
   }
 
   // TW
@@ -258,6 +272,7 @@ declare namespace Scratch {
      */
     defaultValue?: string | number;
     menu?: string;
+    acceptReporters?: boolean;
   }
   interface StringArgument {
     type: 'string';
@@ -266,6 +281,8 @@ declare namespace Scratch {
      */
     defaultValue?: string | number;
     menu?: string;
+    acceptReporters?: boolean;
+    canMultiline?: boolean;
   }
   interface MatrixArgument {
     type: 'matrix';
@@ -297,6 +314,7 @@ declare namespace Scratch {
     ArrayArgument |
     TableArgument |
     ExtendableArgument |
+    SliderArgument |
 
     // TW
     CostumeArgument |
@@ -313,7 +331,10 @@ declare namespace Scratch {
     MatrixArgument |
     NoteArgument |
     ImageArgument
-  );
+  ) & {
+    /** Use another block in this extension as the argument's default shadow. */
+    shadow?: string;
+  };
 
   // TW
   interface LabelBlock extends AbstractBlock {
@@ -328,13 +349,49 @@ declare namespace Scratch {
     text: string | string[];
     filter?: Array<'target' | 'sprite'>;
   }
+  interface BlockSwitch {
+    id: string;
+    inputs?: Array<[string, string]>;
+    splitInputs?: string[];
+    rawId?: boolean;
+  }
+  interface CompilerVariablePool {
+    next(): string;
+  }
+  interface CompilerUtility {
+    target: VM.Target;
+    runtime: VM.Runtime;
+    localVariables: CompilerVariablePool;
+    isProcedure: boolean;
+    isWarp: boolean;
+    warpTimer: boolean;
+    debug: boolean;
+    isInHat: boolean;
+    compileBranch(branchNumber: number, isLoop?: boolean): string;
+    compileFunction(branchNumber: number, parameters?: string[], fallback?: string): string;
+  }
+  type CompilerFunction = (args: Record<string, string>, util: CompilerUtility) => string;
+  interface CompilerFunctions {
+    input: CompilerFunction;
+    stack?: CompilerFunction | null;
+  }
   interface ExecutableBlock extends AbstractBlock {
-    blockShape?: 1 | 2 | 3; // TW
+    blockShape?: 1 | 2 | 3 | 4;
     opcode: string;
     func?: string;
     arguments?: Record<string, Argument>;
     hideFromPalette?: boolean;
     blockIconURI?: string;
+    branchIconURI?: string;
+    color1?: string;
+    color2?: string;
+    color3?: string;
+    tooltip?: string;
+    allowDropAnywhere?: boolean;
+    duplicateOnDrag?: boolean;
+    switches?: Array<string | BlockSwitch>;
+    isDynamic?: boolean;
+    compiler?: CompilerFunction | CompilerFunctions;
   }
   interface BooleanBlock extends ExecutableBlock {
     blockType: 'Boolean';
@@ -433,16 +490,32 @@ declare namespace Scratch {
 
   type Separator = '---';
 
+  type MenuItem = string | {
+    text: string;
+    value: string;
+  };
+  type MenuItems = MenuItem[];
+  interface MutatorState {
+    output?: 'reporter' | 'Boolean' | 'Object' | 'Array';
+    arguments?: Record<string, Argument>;
+    previousStatement?: boolean;
+    nextStatement?: boolean;
+    inputsInline?: boolean;
+  }
   interface Menu {
     acceptReporters?: boolean;
+    acceptText?: boolean;
     /**
      * A list of static items in the menu, or the name of the dynamic menu function.
      * The string '---' adds a non-selectable separator between items.
      */
-    items: Array<string | {
-      text: string;
-      value: string;
-    }> | string;
+    items: MenuItems | string;
+    mutator?: Record<string, MutatorState>;
+  }
+  interface DependentMenu {
+    parentName: string;
+    optionMapping: Record<string, MenuItems>;
+    defaultOptions?: MenuItems;
   }
 
   interface Info {
@@ -480,8 +553,11 @@ declare namespace Scratch {
 
     docsURI?: string;
 
+    /** Extension IDs or URLs which must be loaded before this extension. */
+    requiredExtensions?: string[];
+
     blocks: (Block | Separator)[];
-    menus?: Record<string, Menu | string[]>;
+    menus?: Record<string, Menu | DependentMenu | MenuItems | string>;
   }
 
   interface Extension {

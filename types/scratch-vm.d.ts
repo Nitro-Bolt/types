@@ -914,6 +914,7 @@ declare namespace VM {
     target: Target;
     runtime: Runtime;
     stackFrame: StackFrame;
+    iterationNumber: number;
     stackTimerFinished(): boolean;
     stackTimerNeedsInit(): boolean;
     startStackTimer(milliseconds: number): void;
@@ -935,15 +936,15 @@ declare namespace VM {
     /**
      * @see {Sequencer.stepToProcedure}
      */
-    startProcedure(procedureCode: string): void;
+    startProcedure(procedureCode: string, isGlobal?: boolean): void;
     /**
      * @see {Blocks.getProcedureParamNamesAndIds}
      */
-    getProcedureParamNamesAndIds(procedureCode: string): [string[], string[]];
+    getProcedureParamNamesAndIds(procedureCode: string, requireGlobal?: boolean): [string[], string[]] | null;
     /**
      * @see {Blocks.getProcedureParamNamesIdsAndDefaults}
      */
-    getProcedureParamNamesIdsAndDefaults(procedureCode: string): [string[], string[], string[]];
+    getProcedureParamNamesIdsAndDefaults(procedureCode: string, requireGlobal?: boolean): [string[], string[], string[]] | null;
     /**
      * @see {Thread.initParams}
      */
@@ -956,6 +957,14 @@ declare namespace VM {
      * @see {Thread.getParam}
      */
     getParam(name: string): ScratchCompatibleValue;
+    /**
+     * Set a procedure parameter, initializing the parameter storage if needed.
+     */
+    setParam(name: string, value: unknown): void;
+    /**
+     * Convert values from a possibly nested extendable argument into nested arrays.
+     */
+    extendableToArray(args: Record<string, unknown>, ...path: string[]): unknown[];
     /**
      * Use instead of runtime.startHats inside blocks.
      * @see {Runtime.startHats}

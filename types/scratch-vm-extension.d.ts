@@ -402,6 +402,8 @@ declare namespace Scratch {
   }
   interface CommandBlock extends ExecutableBlock {
     blockType: 'command';
+    /** Reporter type used when the block is placed in an input. */
+    dualType?: 'reporter' | 'Boolean' | 'Object' | 'Array';
     /**
      * Defaults to false.
      */

@@ -222,6 +222,7 @@ declare namespace Scratch {
     minInputs?: number;
     maxInputs?: number;
     separator?: string;
+    acceptArray?: boolean;
   }
   interface SliderArgument {
     type: 'slider';

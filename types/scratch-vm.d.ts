@@ -985,6 +985,7 @@ declare namespace VM {
     tryCompile(): void;
     triedToCompile: boolean;
     generator: Generator | null;
+    compiledFunction: (() => void) | null;
     getId(): string;
     procedures: Record<string, unknown> | null;
     executableHat: boolean;
@@ -1061,6 +1062,38 @@ declare namespace VM {
     reportFrames(): void;
     idByName(name: string): number;
     nameById(id: number): string | null;
+  }
+
+  interface SamplerLocation {
+    blockId: string;
+    spriteId: string;
+  }
+
+  interface SamplerConstructor {
+    new(runtime: Runtime): Sampler;
+    IDLE: -1;
+    RUNTIME: -2;
+    RENDERER: -3;
+    WARP_TIMER: -4;
+    LEVEL_BASIC: 1;
+    LEVEL_COMMANDS: 2;
+  }
+
+  /**
+   * Sampling profiler. The current location is stored in a SharedArrayBuffer so that a worker can
+   * sample it at a high frequency. Implementors are responsible for running that worker.
+   */
+  interface Sampler {
+    runtime: Runtime;
+    pc: Int32Array | null;
+    enableBasic: boolean;
+    enableCommands: boolean;
+    locations: SamplerLocation[];
+    blockLocations: Map<string, Map<string, number>>;
+    isAvailable(): boolean;
+    setEnabled(level: number): void;
+    blockToLocation(spriteId: string, blockId: string): number;
+    locationToBlock(location: number): SamplerLocation;
   }
 
   interface Sequencer {
@@ -1821,6 +1854,7 @@ declare namespace VM {
     emitMicListening(listening: boolean): void;
 
     profiler: Profiler | null;
+    sampler: Sampler;
     enableProfiling(callback: (profilerFrame: ProfilerFrame) => void): void;
     disableProfiling(): void;
   }
@@ -1879,7 +1913,8 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
     };
     RenderedTarget: {
       new(sprite: VM.Sprite, runtime: VM.Runtime): VM.RenderedTarget;
-    }
+    };
+    Sampler: VM.SamplerConstructor;
   };
 
   constructor();

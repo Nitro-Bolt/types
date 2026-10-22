@@ -142,13 +142,71 @@ declare namespace Scratch {
      * @param typeId The ID to look up.
      * @returns True if registered.
      */
-    function get(typeId: string): boolean;
+    function has(typeId: string): boolean;
     /**
      * Get a registered custom type class.
      * @param typeId The ID to look up.
      * @returns The class definition, or null when not registered.
      */
     function get(typeId: string): Function | null;
+  }
+  interface CustomBlockShape {
+    /**
+     * Adds SVG path commands for the left edge.
+     */
+    leftEdge(): string;
+    /**
+     * Adds SVG path commands for the right edge. If omitted, a mirrored version of {@link leftEdge} is used.
+     */
+    rightEdge?(): string;
+    /**
+     * Returns the edge width for the block's total height. If omitted, the default is half the block height.
+     */
+    edgeWidth?(): number;
+    /**
+     * Returns the space between this shape and an inner shape.
+     */
+    padding?(): number | {
+      left: number,
+      right: number
+    };
+  }
+  /**
+   * Custom block shapes API exposed to extensions as Scratch.BlockShapes.
+   * 
+   * Custom shapes define the visual geometry of your blocks. By registering a new shape, you can create custom
+   * tab configurations, arrow shapes, or specific padding requirements for your custom types.
+   * 
+   * Custom shapes are available only to unsandboxed extensions. Register each shape before the extension calls
+   * {@link Scratch.extensions.register}, so the shape is available when the VM processes `getInfo()`.
+   * 
+   * @see https://docs.nitrobolt.org/extensions/custom-shapes
+   */
+  namespace BlockShapes {
+    /**
+     * Register a custom block shape definition under an ID.
+     * Must be called while the extension is loading.
+     * @param name An ID like "ddeStar".
+     * @param definition The shape definition.
+     */
+    function register(name: string, definition: CustomBlockShape): void;
+    /**
+     * Remove a previously registered custom block shape.
+     * @param name The ID of the shape.
+     */
+    function unregister(name: string): void;
+    /**
+     * Check whether a custom block shape ID is currently registered.
+     * @param name The ID to look up.
+     * @returns True if registered.
+     */
+    function has(name: string): boolean;
+    /**
+     * Get a registered custom block shape definition.
+     * @param name The ID to look up.
+     * @returns The shape definition, or null when not registered.
+     */
+    function get(name: string): CustomBlockShape | null;
   }
   namespace external {
     /**

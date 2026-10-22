@@ -1508,11 +1508,11 @@ declare namespace VM {
     DEBUGGER_TIMER_UPDATE: [Record<string, DebuggerTimer>];
     EXTENSION_SHAPE_ADDED: [{
       name: string,
-      definition: Object
+      definition: Scratch.CustomBlockShape
     }];
     EXTENSION_SHAPE_REMOVED: [{
       name: string,
-      definition: Object
+      definition: Scratch.CustomBlockShape
     }];
 
     // TW

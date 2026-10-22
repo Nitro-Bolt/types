@@ -24,7 +24,7 @@ declare namespace VM {
   interface StoredProjectOptions {
     framerate: number;
     height: number;
-    hq: boolean;
+    hq: IfRenderer<boolean, false>;
     interpolation: boolean;
     runtimeOptions: RuntimeOptions;
     width: number;

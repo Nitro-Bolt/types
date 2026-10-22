@@ -21,6 +21,14 @@ declare namespace VM {
     scopeId: string;
     _isOpen: boolean;
   }
+  interface StoredProjectOptions {
+    framerate: number;
+    height: number;
+    hq: boolean;
+    interpolation: boolean;
+    runtimeOptions: RuntimeOptions;
+    width: number;
+  }
   // TW
   interface RuntimeOptions {
     maxClones: number;
@@ -1530,6 +1538,8 @@ declare namespace VM {
   interface Runtime extends EventEmitter<RuntimeEventMap> {
     // NB
     projectFolders: ProjectFolder[];
+    _storedProjectOptions: StoredProjectOptions;
+    _defaultStoredSettings: StoredProjectOptions;
     // TW
     threadMap: Map<string, Thread>;
     frameLoop: FrameLoop;

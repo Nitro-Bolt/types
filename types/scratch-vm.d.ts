@@ -10,6 +10,17 @@
 /// <reference path="./scratch-svg-renderer.d.ts" />
 
 declare namespace VM {
+  // NB
+  type ProjectFolderKind = "sprite" | "costume" | "sound" | "asset";
+  interface ProjectFolder {
+    color: string;
+    id: string;
+    kind: ProjectFolderKind;
+    name: string;
+    parentId: string;
+    scopeId: string;
+    _isOpen: boolean;
+  }
   // TW
   interface RuntimeOptions {
     maxClones: number;
@@ -1517,6 +1528,8 @@ declare namespace VM {
   }
 
   interface Runtime extends EventEmitter<RuntimeEventMap> {
+    // NB
+    projectFolders: ProjectFolder[];
     // TW
     threadMap: Map<string, Thread>;
     frameLoop: FrameLoop;

@@ -205,10 +205,19 @@ declare namespace VM {
     addCostumeAt(costumeObject: Costume, index: number): void;
 
     /**
-     * Delete a costume by index.
+     * Delete a costume by index. Does not destroy its skin.
      * @returns The deleted costume, or undefined if none existed at that index.
      */
     deleteCostumeAt(index: number): Costume | undefined;
+
+    deleteCostume(index: number): Costume | null;
+
+    /**
+     * Does not dispose its sound player.
+     */
+    deleteSoundAt(index: number): Sound | undefined;
+
+    deleteSound(index: number): Sound | null;
 
     /**
      * Disconnect a clone from this sprite. The clone is unmodified; in particular its dispose() is not called.
@@ -987,6 +996,7 @@ declare namespace VM {
     tryCompile(): void;
     triedToCompile: boolean;
     generator: Generator | null;
+    compiledFunction: (() => void) | null;
     getId(): string;
     procedures: Record<string, unknown> | null;
     executableHat: boolean;
@@ -1063,6 +1073,38 @@ declare namespace VM {
     reportFrames(): void;
     idByName(name: string): number;
     nameById(id: number): string | null;
+  }
+
+  interface SamplerLocation {
+    blockId: string;
+    spriteId: string;
+  }
+
+  interface SamplerConstructor {
+    new(runtime: Runtime): Sampler;
+    IDLE: -1;
+    RUNTIME: -2;
+    RENDERER: -3;
+    WARP_TIMER: -4;
+    LEVEL_BASIC: 1;
+    LEVEL_COMMANDS: 2;
+  }
+
+  /**
+   * Sampling profiler. The current location is stored in a SharedArrayBuffer so that a worker can
+   * sample it at a high frequency. Implementors are responsible for running that worker.
+   */
+  interface Sampler {
+    runtime: Runtime;
+    pc: Int32Array | null;
+    enableBasic: boolean;
+    enableCommands: boolean;
+    locations: SamplerLocation[];
+    blockLocations: Map<string, Map<string, number>>;
+    isAvailable(): boolean;
+    setEnabled(level: number): void;
+    blockToLocation(spriteId: string, blockId: string): number;
+    locationToBlock(location: number): SamplerLocation;
   }
 
   interface Sequencer {
@@ -1823,6 +1865,7 @@ declare namespace VM {
     emitMicListening(listening: boolean): void;
 
     profiler: Profiler | null;
+    sampler: Sampler;
     enableProfiling(callback: (profilerFrame: ProfilerFrame) => void): void;
     disableProfiling(): void;
   }
@@ -1881,7 +1924,8 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
     };
     RenderedTarget: {
       new(sprite: VM.Sprite, runtime: VM.Runtime): VM.RenderedTarget;
-    }
+    };
+    Sampler: VM.SamplerConstructor;
   };
 
   constructor();
@@ -1969,7 +2013,7 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
 
   deserializeProject(json: object, zip?: JSZip): Promise<void>;
 
-  installTargets(targets: VM.Target[], extensions: VM.ImportedExtensionsInfo, wholeProject: boolean): Promise<void>;
+  installTargets(targets: VM.Target[], extensions: VM.ImportedExtensionsInfo, wholeProject: boolean, layerOrder?: number[]): Promise<void>;
 
   /**
    * @deprecated
@@ -2080,13 +2124,13 @@ declare class VM extends EventEmitter<VM.VirtualMachineEventMap> {
    * Deletes the costume at a given index in the editing target.
    * @returns If a costume was deleted, returns a function to undo the deletion.
    */
-  deleteCostume(costumeIndex: number): (() => void) | null;
+  deleteCostume(costumeIndex: number): (() => Promise<void>) | null;
 
   /**
    * Deletes the sound at a given index in the editing target.
    * @returns If a sound was deleted, returns a function to undo the deletion.
    */
-  deleteSound(soundIndex: number): (() => void) | null;
+  deleteSound(soundIndex: number): (() => Promise<void>) | null;
 
   /**
    * Returns a promise that resolves when all required extensions have been imported.

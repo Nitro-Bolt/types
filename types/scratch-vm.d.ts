@@ -1541,7 +1541,7 @@ declare namespace VM {
     paused: boolean;
     pause(): void;
     resume(): void;
-    _storedProjectOptions: StoredProjectOptions;
+    _storedProjectOptions: Partial<StoredProjectOptions> | null;
     _defaultStoredSettings: StoredProjectOptions;
     // TW
     threadMap: Map<string, Thread>;

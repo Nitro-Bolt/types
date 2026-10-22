@@ -1565,6 +1565,8 @@ declare namespace VM {
     paused: boolean;
     pause(): void;
     resume(): void;
+    blockShapes: Map<string, Scratch.CustomBlockShape>;
+    customTypes: Map<string, Function>;
     /**
      * Map of opcodes allowing extensions to hook into the JavaScript compiler.
      */
@@ -1581,6 +1583,7 @@ declare namespace VM {
     _customTypeIds: WeakMap<Function, string>;
     _storedProjectOptions: Partial<StoredProjectOptions> | null;
     _defaultStoredSettings: StoredProjectOptions;
+
     // TW
     threadMap: Map<string, Thread>;
     frameLoop: FrameLoop;

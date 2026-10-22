@@ -1541,6 +1541,20 @@ declare namespace VM {
     paused: boolean;
     pause(): void;
     resume(): void;
+    /**
+     * Map of opcodes allowing extensions to hook into the JavaScript compiler.
+     */
+    _compilerInterfaces: Record<string, Function>;
+    /**
+     * Precomputed custom-type argument cast functions per opcode.
+     * Populated when extension blocks are registered.
+     */
+    _customArgumentCasters: Map<string, Record<string, Function>>;
+    /**
+     * Reverse lookup of custom type ID by class definition, so serialization
+     * can identify instances in O(1).
+     */
+    _customTypeIds: WeakMap<Function, string>;
     _storedProjectOptions: Partial<StoredProjectOptions> | null;
     _defaultStoredSettings: StoredProjectOptions;
     // TW

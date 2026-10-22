@@ -29,6 +29,13 @@ declare namespace VM {
     runtimeOptions: RuntimeOptions;
     width: number;
   }
+  type LogType = "log" | "warn" | "error";
+  interface DebuggerTimer {
+    average: number | null;
+    count: number;
+    max: number | null;
+    min: number | null;
+  }
   // TW
   interface RuntimeOptions {
     maxClones: number;
@@ -1390,6 +1397,9 @@ declare namespace VM {
   }
 
   interface RuntimeAndVirtualMachineEventMap {
+    // NB
+    PROJECT_RUN_PAUSE: [];
+    PROJECT_RUN_RESUME: [];
     // TW
     RUNTIME_OPTIONS_CHANGED: [RuntimeOptions];
     COMPILER_OPTIONS_CHANGED: [CompilerOptions];
@@ -1491,6 +1501,20 @@ declare namespace VM {
   }
 
   interface RuntimeEventMap extends RuntimeAndVirtualMachineEventMap {
+    // NB
+    DEBUGGER_BREAKPOINT: [];
+    DEBUGGER_CLEAR: [];
+    DEBUGGER_LOG: [LogType, string, string, string, string];
+    DEBUGGER_TIMER_UPDATE: [Record<string, DebuggerTimer>];
+    EXTENSION_SHAPE_ADDED: [{
+      name: string,
+      definition: Object
+    }];
+    EXTENSION_SHAPE_REMOVED: [{
+      name: string,
+      definition: Object
+    }];
+
     // TW
     BEFORE_EXECUTE: [];
     AFTER_EXECUTE: [];
@@ -1911,6 +1935,12 @@ declare namespace VM {
   }
 
   interface VirtualMachineEventMap extends RuntimeAndVirtualMachineEventMap {
+    // NB
+    CREATE_UNSANDBOXED_EXTENSION_API: [typeof Scratch];
+    EXTENSION_REMOVED: [ExtensionInfo];
+    EXTENSION_REORDERED: [ExtensionInfo];
+
+    // TW
     TURBO_MODE_ON: [];
 
     TURBO_MODE_OFF: [];

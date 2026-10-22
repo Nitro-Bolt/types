@@ -119,6 +119,37 @@ declare namespace Scratch {
     const ROUND: 2;
     const SQUARE: 3;
   }
+  /**
+   * Custom types API exposed to extensions as Scratch.types.
+   */
+  namespace types {
+    /**
+     * Register a custom type class under an ID.
+     * Must be called while the extension is loading. Register types at the top
+     * so they exist before getInfo() is read.
+     * @param typeId An ID like "ddeHelloNeighbor".
+     * @param classDef Class instance of custom type.
+     */
+    function register(typeId: string, classDef: Function): void;
+    /**
+     * Remove a previously registered custom type.
+     * @param typeId The ID to unregister.
+     */
+    
+    function unregister(typeId: string): void;
+    /**
+     * Check whether a custom type ID is currently registered.
+     * @param typeId The ID to look up.
+     * @returns True if registered.
+     */
+    function get(typeId: string): boolean;
+    /**
+     * Get a registered custom type class.
+     * @param typeId The ID to look up.
+     * @returns The class definition, or null when not registered.
+     */
+    function get(typeId: string): Function | null;
+  }
   namespace external {
     /**
      * Import an ES module, like import().

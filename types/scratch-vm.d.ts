@@ -36,6 +36,28 @@ declare namespace VM {
     max: number | null;
     min: number | null;
   }
+  interface CustomBlockShape {
+    /**
+     * Adds SVG path commands for the left edge.
+     */
+    leftEdge(): string;
+    /**
+     * Adds SVG path commands for the right edge. If omitted, a mirrored version of {@link leftEdge} is used.
+     */
+    rightEdge?(): string;
+    /**
+     * Returns the edge width for the block's total height. If omitted, the default is half the block height.
+     */
+    edgeWidth?(): number;
+    /**
+     * Returns the space between this shape and an inner shape.
+     */
+    padding?(): number | {
+      left: number,
+      right: number
+    };
+  }
+
   // TW
   interface RuntimeOptions {
     maxClones: number;
@@ -1508,11 +1530,11 @@ declare namespace VM {
     DEBUGGER_TIMER_UPDATE: [Record<string, DebuggerTimer>];
     EXTENSION_SHAPE_ADDED: [{
       name: string,
-      definition: Scratch.CustomBlockShape
+      definition: CustomBlockShape
     }];
     EXTENSION_SHAPE_REMOVED: [{
       name: string,
-      definition: Scratch.CustomBlockShape
+      definition: CustomBlockShape
     }];
 
     // TW
@@ -1565,7 +1587,7 @@ declare namespace VM {
     paused: boolean;
     pause(): void;
     resume(): void;
-    blockShapes: Map<string, Scratch.CustomBlockShape>;
+    blockShapes: Map<string, CustomBlockShape>;
     customTypes: Map<string, Function>;
     /**
      * Map of opcodes allowing extensions to hook into the JavaScript compiler.

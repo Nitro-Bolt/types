@@ -150,27 +150,6 @@ declare namespace Scratch {
      */
     function get(typeId: string): Function | null;
   }
-  interface CustomBlockShape {
-    /**
-     * Adds SVG path commands for the left edge.
-     */
-    leftEdge(): string;
-    /**
-     * Adds SVG path commands for the right edge. If omitted, a mirrored version of {@link leftEdge} is used.
-     */
-    rightEdge?(): string;
-    /**
-     * Returns the edge width for the block's total height. If omitted, the default is half the block height.
-     */
-    edgeWidth?(): number;
-    /**
-     * Returns the space between this shape and an inner shape.
-     */
-    padding?(): number | {
-      left: number,
-      right: number
-    };
-  }
   /**
    * Custom block shapes API exposed to extensions as Scratch.BlockShapes.
    * 
@@ -189,7 +168,7 @@ declare namespace Scratch {
      * @param name An ID like "ddeStar".
      * @param definition The shape definition.
      */
-    function register(name: string, definition: CustomBlockShape): void;
+    function register(name: string, definition: VM.CustomBlockShape): void;
     /**
      * Remove a previously registered custom block shape.
      * @param name The ID of the shape.
@@ -206,7 +185,7 @@ declare namespace Scratch {
      * @param name The ID to look up.
      * @returns The shape definition, or null when not registered.
      */
-    function get(name: string): CustomBlockShape | null;
+    function get(name: string): VM.CustomBlockShape | null;
   }
   namespace external {
     /**

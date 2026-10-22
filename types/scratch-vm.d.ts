@@ -1538,6 +1538,9 @@ declare namespace VM {
   interface Runtime extends EventEmitter<RuntimeEventMap> {
     // NB
     projectFolders: ProjectFolder[];
+    paused: boolean;
+    pause(): void;
+    resume(): void;
     _storedProjectOptions: StoredProjectOptions;
     _defaultStoredSettings: StoredProjectOptions;
     // TW

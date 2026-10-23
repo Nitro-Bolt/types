@@ -8,6 +8,7 @@
 /// <reference path="./scratch-audio.d.ts" />
 /// <reference path="./scratch-storage.d.ts" />
 /// <reference path="./scratch-svg-renderer.d.ts" />
+/// <reference path="./scratch-vm-extension.d.ts" />
 
 declare namespace VM {
   // NB

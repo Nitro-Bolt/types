@@ -58,6 +58,17 @@ declare namespace VM {
       right: number
     };
   }
+  abstract class CustomType {
+    constructor(value: any);
+    static cast?(value: any): CustomType;
+    static fromJSON?(value: any): CustomType;
+    static visualReport(instance: unknown): string;
+    static monitorContent(instance: unknown): string;
+    static shape?: string;
+    toString?(): string;
+    toJSON?<T>(): T;
+    valueOf?(): number | string;
+  }
 
   // TW
   interface RuntimeOptions {
@@ -1589,7 +1600,7 @@ declare namespace VM {
     pause(): void;
     resume(): void;
     blockShapes: Map<string, CustomBlockShape>;
-    customTypes: Map<string, Function>;
+    customTypes: Map<string, CustomType>;
     /**
      * Map of opcodes allowing extensions to hook into the JavaScript compiler.
      */

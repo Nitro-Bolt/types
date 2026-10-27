@@ -130,7 +130,7 @@ declare namespace Scratch {
      * @param typeId An ID like "ddeHelloNeighbor".
      * @param classDef Class instance of custom type.
      */
-    function register(typeId: string, classDef: Function): void;
+    function register(typeId: string, classDef: VM.CustomType): void;
     /**
      * Remove a previously registered custom type.
      * @param typeId The ID to unregister.

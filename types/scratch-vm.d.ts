@@ -58,51 +58,72 @@ declare namespace VM {
       right: number
     };
   }
-  abstract class CustomTypeClass {
+  /**
+   * **This is an ambient class and cannot be instantiated.**
+   * 
+   * Custom types allow you to define complex data objects that behave like classes in Scratch.
+   * By creating a custom type, you can define how your data is cast, how it appears in the UI,
+   * and how it is serialized when a project is saved.
+   * 
+   * To register a new type in your extension, use the {@link Scratch.types} API:
+   * 
+   * ```js
+   * class YourClass {
+   *   // methods
+   * }
+   * Scratch.types.register("typeName", YourClass);
+   * ```
+   * 
+   * Custom types are available only to unsandboxed extensions. Register each type before the
+   * extension calls {@link Scratch.extensions.register}, so the type is available when the VM
+   * processes `getInfo()`.
+   */
+  class CustomType {
     /**
-     * Provides a string representation for Scratch operations.
+     * The runtime uses this constructor when cast or fromJSON is not defined.
      */
-    abstract toString?(): string;
-    /**
-     * Converts an instance to JSON-compatible data.
-     * If omitted, the runtime serializes the instance's enumerable properties.
-     */
-    abstract toJSON?<T>(): T;
-    /**
-     * Provides a primitive number or string for standard Scratch operations and reporter bubbles.
-     */
-    abstract valueOf?(): number | string;
-  }
-  interface CustomType {
-    new(value: any): CustomTypeClass;
+    constructor(value: any);
     /**
      * Converts a block argument to your type. If omitted, the runtime uses `new YourClass(value)`.
      * Return existing instances unchanged when implementing this.
      */
-    cast?(value: any): CustomTypeClass;
+    static cast?(value: any): CustomType;
     /**
      * Restores an instance from serialized data. If omitted, the runtime uses `new YourClass(value)`.
      */
-    fromJSON?(value: any): CustomTypeClass;
+    static fromJSON?(value: any): CustomType;
     /**
      * Returns an HTML string shown when a user clicks the reporter block.
      * 
      * If `visualReport` is defined and `monitorContent` isn't, then `visualReport`
      * will be used for the monitor content, and vice versa.
      */
-    visualReport?(instance: unknown): string;
+    static visualReport?(instance: unknown): string;
     /**
      * Returns an HTML string shown in the block's monitor.
      * 
      * If `visualReport` is defined and `monitorContent` isn't, then `visualReport`
      * will be used for the monitor content, and vice versa.
      */
-    monitorContent?(instance: unknown): string;
+    static monitorContent?(instance: unknown): string;
     /**
      * Provides a built-in shape such as `Scratch.BlockShape.SQUARE`
      * or the name of a registered custom shape such as `"nbArrow"`.
      */
     shape?: string;
+    /**
+     * Provides a string representation for Scratch operations.
+     */
+    toString?(): string;
+    /**
+     * Converts an instance to JSON-compatible data.
+     * If omitted, the runtime serializes the instance's enumerable properties.
+     */
+    toJSON?<T>(): T;
+    /**
+     * Provides a primitive number or string for standard Scratch operations and reporter bubbles.
+     */
+    valueOf?(): any;
   }
 
   // TW

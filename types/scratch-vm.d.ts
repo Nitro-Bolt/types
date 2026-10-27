@@ -58,16 +58,51 @@ declare namespace VM {
       right: number
     };
   }
-  abstract class CustomType {
-    constructor(value: any);
-    static cast?(value: any): CustomType;
-    static fromJSON?(value: any): CustomType;
-    static visualReport(instance: unknown): string;
-    static monitorContent(instance: unknown): string;
-    static shape?: string;
-    toString?(): string;
-    toJSON?<T>(): T;
-    valueOf?(): number | string;
+  abstract class CustomTypeClass {
+    /**
+     * Provides a string representation for Scratch operations.
+     */
+    abstract toString?(): string;
+    /**
+     * Converts an instance to JSON-compatible data.
+     * If omitted, the runtime serializes the instance's enumerable properties.
+     */
+    abstract toJSON?<T>(): T;
+    /**
+     * Provides a primitive number or string for standard Scratch operations and reporter bubbles.
+     */
+    abstract valueOf?(): number | string;
+  }
+  interface CustomType {
+    new(value: any): CustomTypeClass;
+    /**
+     * Converts a block argument to your type. If omitted, the runtime uses `new YourClass(value)`.
+     * Return existing instances unchanged when implementing this.
+     */
+    cast?(value: any): CustomTypeClass;
+    /**
+     * Restores an instance from serialized data. If omitted, the runtime uses `new YourClass(value)`.
+     */
+    fromJSON?(value: any): CustomTypeClass;
+    /**
+     * Returns an HTML string shown when a user clicks the reporter block.
+     * 
+     * If `visualReport` is defined and `monitorContent` isn't, then `visualReport`
+     * will be used for the monitor content, and vice versa.
+     */
+    visualReport(instance: unknown): string;
+    /**
+     * Returns an HTML string shown in the block's monitor.
+     * 
+     * If `visualReport` is defined and `monitorContent` isn't, then `visualReport`
+     * will be used for the monitor content, and vice versa.
+     */
+    monitorContent(instance: unknown): string;
+    /**
+     * Provides a built-in shape such as `Scratch.BlockShape.SQUARE`
+     * or the name of a registered custom shape such as `"nbArrow"`.
+     */
+    shape?: string;
   }
 
   // TW

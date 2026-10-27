@@ -90,14 +90,14 @@ declare namespace VM {
      * If `visualReport` is defined and `monitorContent` isn't, then `visualReport`
      * will be used for the monitor content, and vice versa.
      */
-    visualReport(instance: unknown): string;
+    visualReport?(instance: unknown): string;
     /**
      * Returns an HTML string shown in the block's monitor.
      * 
      * If `visualReport` is defined and `monitorContent` isn't, then `visualReport`
      * will be used for the monitor content, and vice versa.
      */
-    monitorContent(instance: unknown): string;
+    monitorContent?(instance: unknown): string;
     /**
      * Provides a built-in shape such as `Scratch.BlockShape.SQUARE`
      * or the name of a registered custom shape such as `"nbArrow"`.

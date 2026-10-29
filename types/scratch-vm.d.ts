@@ -134,6 +134,7 @@ declare namespace VM {
   }
   interface CompilerOptions {
     enabled: boolean;
+    catchErrors: boolean;
     warpTimer: boolean;
   }
   interface CloudOptions {

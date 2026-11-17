@@ -9,6 +9,9 @@ declare namespace ScratchStorage {
     WOFF = 'woff',
     WOFF2 = 'woff2',
 
+    // NB
+    OGG = 'ogg',
+
     JPG = 'jpg',
     JSON = 'json',
     MP3 = 'mp3',
